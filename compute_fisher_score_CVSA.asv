@@ -1,0 +1,58 @@
+% works only for psd
+function fisher = compute_fisher_score_CVSA(signal, header, cueTYPs, idx_selFreqs, idx_interest_ch, interval_step, frameRate)
+
+    %% extract information
+    nchannels = length(idx_interest_ch);
+    [fixPOS, fixDUR, cuePOS, cueDUR, cueTYP, cfPOS, cfDUR, n_trial] = extract_info_data(header, 786, cueTYPs, 781);
+
+    %% Extract trial infoo -> a noi interessa solo il continuous feedback con la divisione in secondi
+    disp('[INFO] extracting trials and fixation')
+
+    minDur = min(cfDUR) - 1;
+    intervals = 1:interval_step:minDur/frameRate; % in sec
+    ck = zeros(size(signal,1),length(intervals)+2);
+
+    for idx_inter = 1:length(intervals)+2
+        for idx_tr=1:n_trial
+            if idx_inter == length(intervals) + 1
+                % cue + cf
+                c_start = cuePOS(idx_tr);
+                c_stop = cfPOS(idx_tr) + cfDUR(idx_tr) - 1;
+
+                ck(c_start:c_stop,idx_inter) = cueTYP(idx_tr);
+            elseif idx_inter == length(intervals) + 2
+                % cf
+                c_start = cfPOS(idx_tr);
+                c_stop = cfPOS(idx_tr) + cfDUR(idx_tr) - 1;
+
+                ck(c_start:c_stop,idx_inter) = cueTYP(idx_tr);
+            else
+                % intervals    TODO
+                c_start = cfPOS(idx_tr) + (intervals(idx_inter)-1)*frameRate;
+                c_stop = cfPOS(idx_tr) + intervals(idx_inter)*frameRate;
+                ck(c_start:c_stop,idx_inter) = cueTYP(idx_tr);
+            end
+
+        end
+    end
+
+    %% keep only required signal
+    signal = signal(:,idx_selFreqs,idx_interest_ch);
+
+    fisher = nan(length(inte))
+
+    %% compute fisher score
+    for idx_inter=1:length(intervals) + 2
+        cmu = zeros(length(idx_selFreqs), nchannels, length(cueTYPs));
+        csigma = zeros(length(idx_selFreqs), nchannels, length(cueTYPs));
+
+        for idx_class=1:length(cueTYPs)
+            s = signal(ck(:,idx_inter)==cueTYPs(idx_class),:,:);
+            cmu(:, :, idx_class) = squeeze(mean(s, 1));
+            csigma(:,:, idx_class) = squeeze(std(s,1));
+        end
+
+        fisher = abs(cmu(:,:,2) - cmu(:,:,1)) ./ sqrt((csigma(:,:,1).^2 + csigma(:,:,2).^2));
+    end
+
+end

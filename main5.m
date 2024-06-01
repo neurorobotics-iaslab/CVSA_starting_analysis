@@ -1,0 +1,145 @@
+%% Plot accumulation + discrete + continuous in one window
+clc; clearvars;
+
+%% General infromation
+c_subject = 'c7';
+path = ['/home/paolo/cvsa_ws/record/' c_subject '/gdf'];
+
+n_channels = 39;
+threshold_rejection = 0.55;
+threshold_control = [0.6 0.6];
+decoder_file = 'c7_blbr_20240517.smr.mat';
+decoder = load(decoder_file);
+lap_path39 = '/home/paolo/laplacians/lap_39ch_CVSA.mat';
+load(lap_path39);
+all_freqs = 0:2:256;
+files = dir(fullfile(path, '*.gdf'));
+
+% parameters
+alpha = 0.97; %
+
+% Variables for data
+signal = [];
+TYP = [];
+POS = [];
+DUR = [];
+HIT_MISS = []; TARGET = [];
+total_nTrials = 0;
+
+%% Iterare over files
+for idx_f=1:length(files)
+    %% Take data
+    disp(['[INFO] Load file '  num2str(idx_f) '/' num2str(length(files))]);
+    file = fullfile(path, files(idx_f).name);
+    [signal, header] = sload(file);
+    signal = signal(:,1:n_channels);
+    c_events = header.EVENT;
+    sampleRate = c_events.SampleRate;
+
+    %% Take information useful
+    TYP = c_events.TYP;
+    POS = c_events.POS;
+    DUR = c_events.DUR;
+    HIT_MISS = c_events.TYP(c_events.TYP == 897 | c_events.TYP == 898 | c_events.TYP == 899);
+    TARGET = c_events.TYP(c_events.TYP == 730 | c_events.TYP == 731);
+    time_discrete = DUR(TYP==781)/sampleRate;
+
+
+    %% Apply the laplacian
+    signal_after_lap = signal * lap;
+
+    %% Apply PSD
+    % parameters pwelch with Hamming
+    wlength = 0.5; % we need it in seconds, so 256/512
+    pshift = 0.25; % overlapping 128 / sampleRate 512 
+    wshift = 0.0625; % new signlas after these seconds 32/512
+    mlength = 1; % moving average biggest windows
+    wconv = 'backward';
+    [psd, f] = proc_spectrogram(signal_after_lap, wlength, wshift, pshift, sampleRate);
+    psd = log(psd);
+
+    %% Define the new events
+    events.TYP = TYP;
+    % calculate the position for the windows
+    events.POS = proc_pos2win(POS, wshift*sampleRate, wconv, mlength*sampleRate);
+    events.DUR = floor(DUR/(wshift*sampleRate)) + 1;
+
+    %% Take trial only continuous feedback
+    nTrials = size(events.TYP(events.TYP == 781), 1);
+    trials_start = events.POS(events.TYP == 781); 
+    trials_end = events.POS(events.TYP == 781) + events.DUR(events.TYP == 781) - 1;
+
+    %% Load decoder and take parameters
+    freqsSelected = decoder.settings.bci.smr.bands;
+    channelsSelected = decoder.settings.bci.smr.channels;
+    gau_M = decoder.settings.bci.smr.gau.M;
+    gau_C = decoder.settings.bci.smr.gau.C;
+
+    %% Iterate over the trials
+    for trial= 1:nTrials
+        disp(['   [PROC] trials ' num2str(trial) '/' num2str(nTrials)]);
+        % variables
+        total_nTrials = total_nTrials + 1;
+        y_d = [0.5 0.5]; 
+        accumulation = [0.5 0.5];
+        c_start = trials_start(trial);
+        c_end = trials_end(trial);
+        legg = {}; % for legends in plot
+        
+        %% Reasoning Discrete case
+        disp('      [INFO] perform discrete case');
+        % iterate over all psd values
+        for psd_idx = c_start:c_end
+            % take the values given the psd index, the frequencies and the channels selected
+            dfet = compute_vectorFeature(channelsSelected, freqsSelected, all_freqs, psd(psd_idx, :,:));
+
+            % calculate the raw probability
+            [a, raw_prob] = gauClassifier(gau_M, gau_C, dfet);
+            [max_value, idMax] = max(raw_prob);
+            [~, idMin] = min(raw_prob);
+%             raw_prob(idMax) = 0.8;
+%             raw_prob(idMin) = 0.2;
+            accumulation = cat(1, accumulation, raw_prob);
+
+            % need to pass the rejection
+            if max_value >= threshold_rejection
+                % we have the row probability, so we can use the discrate case
+                i_y_d = size(y_d, 1);
+                temp_y = (1-alpha) * raw_prob + alpha*y_d(i_y_d,:);
+                y_d = cat(1, y_d, temp_y);
+            else
+                y_d = cat(1, y_d, y_d(size(y_d, 1),:));
+            end
+        end
+
+        %% Plot Discrete case
+        %{%}
+        figure;
+        % define titles
+        title_plot = {['Subject: ' c_subject];
+            ['class asked to the user: ' num2str(TARGET(trial)) ', trial number: ' num2str(trial)];
+            ['class performed in discrete case: ' num2str(TARGET(trial))]};
+%         sgtitle(title_plot);
+
+        % show the discrete case 
+        subplot(1,1,1);
+        trial_dur = (c_end - c_start+1)*wshift;
+        t_singal = linspace(0, trial_dur, size(y_d, 1));
+        hold on;
+        grid on;
+        scatter(t_singal, accumulation(:,1), 40,'k', 'filled');
+        legg = cat(1, legg, {'raw probability'});
+        plot(t_singal, y_d(:,1)', '-.r', 'LineWidth',4);
+        legg = cat(1,legg, {'integrated probability'});
+        line(t_singal, threshold_control(1)*ones(size(t_singal,2), 1), 'LineStyle','--', 'LineWidth', 3);
+        legg = cat(1,legg, {'control threshold: class 1'});
+        line(t_singal, (1-threshold_control(2))*ones(size(t_singal,2), 1), 'LineStyle','--', 'LineWidth', 3);
+        legg = cat(1,legg, {'control threshold: class 2'});
+        hold off;
+        ylabel('control signal (y)');
+        xlabel('time [s]');
+        axis([0 trial_dur 0.0 1.1]);
+        title(num2str(TARGET(trial)));
+        %}
+    end
+end
