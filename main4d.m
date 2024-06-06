@@ -1,12 +1,11 @@
 clc; clear all; close all;
-% create the dataset according to freq selected, channels, day of log band power
+% create the dataset log band power, all channels and freq 8-14
 
 %% informations
 selchs = {'P3', 'PZ', 'P4', 'POZ', 'O1', 'O2', 'P5', 'P1', 'P2', 'P6', 'PO5', 'PO3', 'PO4', 'PO6', 'PO7', 'PO8', 'OZ'};
-c_day = '20240515';
-c_subject = 'c7';
-start_cf = 1; % from which second you extract data, with 0 take the start of the trial
-end_cf   = 4; % end of the trial extracted, with 0 take all the trial length
+c_subject = 'g2';
+start_cf = 0; % from which second you extract data, with 0 take the start of the trial
+end_cf   = 0; % end of the trial extracted, with 0 take all the trial length
 train_percentage = 0.75;
 
 classes = [730 731];
@@ -16,10 +15,10 @@ filterOrder = 4;
 % not modification needed for these informations
 sampleRate = 512;
 lap_path39 = '/home/paolo/laplacians/lap_39ch_CVSA.mat';
-sfile = ['/home/paolo/cvsa_ws/record/dataset/' c_subject '_' c_day '_d_cf_14.mat'];
+sfile = ['/home/paolo/cvsa_ws/record/' c_subject '/dataset/logband_d_cf_' num2str(start_cf) '' num2str(end_cf) '_band_' num2str(band(1)) '' num2str(band(2)) '.mat'];
 
 path = ['/home/paolo/cvsa_ws/record/' c_subject '/mat_selectedTrials'];
-files = dir(fullfile(path, ['*' c_day '*.mat']));
+files = dir(fullfile(path, '*.mat'));
 
 channels_label = {'FP1', 'FP2', 'F3', 'FZ', 'F4', 'FC1', 'FC2', 'C3', 'CZ', 'C4', 'CP1', 'CP2', 'P3', 'PZ', 'P4', 'POZ', 'O1', 'O2', 'EOG', ...
         'F1', 'F2', 'FC3', 'FCZ', 'FC4', 'C1', 'C2', 'CP3', 'CP4', 'P5', 'P1', 'P2', 'P6', 'PO5', 'PO3', 'PO4', 'PO6', 'PO7', 'PO8', 'OZ'};
@@ -66,8 +65,8 @@ for idx_f = 1:length(files)
 
     % Apply lap filter
 %     disp('      [PROC] Apply lap filter');
-    load(lap_path39)
-    info.lap = lap;
+%     load(lap_path39)
+%     info.lap = lap;
 %     s_lap = signal * lap;
 
     % Apply filtering in band

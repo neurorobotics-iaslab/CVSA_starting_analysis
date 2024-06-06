@@ -3,7 +3,7 @@ clc; clear all;
 % perform the laplacian over all 39 channels and in the chanlocs shows only
 % the interest channels
 
-subject = 'c7';
+subject = 'g2';
 
 path = ['/home/paolo/cvsa_ws/record/' subject '/mat_selectedTrials'];
 % path = ['/home/paolo/cvsa_ws/record/' subject '/gdf'];

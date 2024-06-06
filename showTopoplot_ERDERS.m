@@ -108,10 +108,10 @@ end
 
 
 figure();
-topoplot(squeeze(c_cf), chanlocs, 'headrad', 'rim', 'maplimits', [-max(abs(c_cf)) max(abs(c_cf))]);
+topoplot(squeeze(c_cf), chanlocs, 'headrad', 'rim', 'maplimits', [-max(abs(c_cf)) max(abs(c_cf))], 'electrodes', 'labelpoint');
 axis image;
-% title(['ERD/ERS (band [' num2str(band(1)) '-' num2str(band(2)) ']) -- br - bl -- cf from 0' ...
-%     's to ' num2str(ceil((c_cfPeriod(2) - c_cfPeriod(1))/sampleRate)) 's']);
+title(['ERD/ERS (band [' num2str(band(1)) '-' num2str(band(2)) ']) -- br - bl -- cf from 0' ...
+    's to ' num2str(ceil((c_cfPeriod(2) - c_cfPeriod(1))/sampleRate)) 's']);
 colorbar;
 
 % sgtitle(all_title)

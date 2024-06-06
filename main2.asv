@@ -117,6 +117,8 @@ for idx_f = 1:length(files)
         title('Fisher score -- ERD/ERS');
     end
 
+    %% cva with log band
+
     %% PSD
     %{
     psd_wlength = 0.5;

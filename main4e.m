@@ -1,29 +1,25 @@
 clc; clear all; close all;
-% create the dataset according to freq selected, channels
+% create the dataset log band power selected channels and freq 8-14 and
+% select the channels
 
 %% informations
-% selFreqs = {8:2:14; 8:2:14;8:2:14;8:2:14;8:2:14;8:2:14;8:2:14;8:2:14;8:2:14;8:2:14;8:2:14;8:2:14;8:2:14;8:2:14;8:2:14;8:2:14;8:2:14};
-% selchs = {'P3', 'PZ', 'P4', 'POZ', 'O1', 'O2', 'P5', 'P1', 'P2', 'P6', 'PO5', 'PO3', 'PO4', 'PO6', 'PO7', 'PO8', 'OZ'};
-% selFreqs = {[10 14]; [10]; [10 14]}; % d6
-% selchs = {'OZ', 'PO8', 'O1'}; % d6
-% selFreqs = {[10 12 14]; [14]; [10]}; % c7 features 
-% selchs = {'PO5', 'PO8', 'PO4'}; % c7 features 
-% selFreqs = {[10 12]; [10]; [12]}; % g2 features 
-% selchs = {'PO3', 'PO7', 'PZ'}; % g2 features 
-selFreqs = {[14]; [8 10]; [10]}; % h7 features 
-selchs = {'P6', 'OZ', 'PO4'}; % h7 features 
-c_subject = 'h7';
+% selchs = {'P3', 'P1', 'P5'}; % d6
+% selchs = {'PO7', 'PO5', 'PO4', 'PO6', 'PO8'}; % c7
+selchs = {'P6', 'PO7', 'POZ', 'OZ'}; % g2
+% selchs = {'P4', 'PO4', 'O2', 'PO6', 'PO8'}; % h7
+c_subject = 'g2';
 start_cf = 0; % from which second you extract data, with 0 take the start of the trial
 end_cf   = 0; % end of the trial extracted, with 0 take all the trial length
 train_percentage = 0.75;
 
 classes = [730 731];
+band = [8 14]; % try subbands --------------------------
+filterOrder = 4;
 
 % not modification needed for these informations
 sampleRate = 512;
 lap_path39 = '/home/paolo/laplacians/lap_39ch_CVSA.mat';
-load(lap_path39)
-sfile = ['/home/paolo/cvsa_ws/record/' c_subject '/dataset/psd_a_cf_' num2str(start_cf) '' num2str(end_cf) '.mat'];
+sfile = ['/home/paolo/cvsa_ws/record/' c_subject '/dataset/logband_e_cf_' num2str(start_cf) '' num2str(end_cf) '_band_' num2str(band(1)) '' num2str(band(2)) '.mat'];
 
 path = ['/home/paolo/cvsa_ws/record/' c_subject '/mat_selectedTrials'];
 files = dir(fullfile(path, '*.mat'));
@@ -31,20 +27,23 @@ files = dir(fullfile(path, '*.mat'));
 channels_label = {'FP1', 'FP2', 'F3', 'FZ', 'F4', 'FC1', 'FC2', 'C3', 'CZ', 'C4', 'CP1', 'CP2', 'P3', 'PZ', 'P4', 'POZ', 'O1', 'O2', 'EOG', ...
         'F1', 'F2', 'FC3', 'FCZ', 'FC4', 'C1', 'C2', 'CP3', 'CP4', 'P5', 'P1', 'P2', 'P6', 'PO5', 'PO3', 'PO4', 'PO6', 'PO7', 'PO8', 'OZ'};
 
+% selchs = channels_label;
+
 %% initialization variable to save
 X = [];
 y = [];
 
 info.classes = classes;
 info.sampleRate = sampleRate;
-info.selFreqs = selFreqs;
 info.selchs = selchs;
 info.startTimeCfExtracted = start_cf;
 info.files = {};
+info.band = band;
 info.cfStart = [];
 info.cfDur = [];
-info.lap = lap;
+info.filterOrder = 4;
 info.startNewFile = [0];
+info.startcf = [];
 
 %% check the end and start of extraction
 if end_cf < start_cf && end_cf ~= 0
@@ -61,35 +60,43 @@ end
 %% take only interested data
 for idx_f = 1:length(files)
     file = fullfile(path, files(idx_f).name);
-    disp(['file: ' files(idx_f).name]);
     load(file);
     info.files = cat(1, info.files, file);
+    nchannels = length(channels_label);
 
     %% processing
-    band = [2 40];
-    filterOrder = 4;
-    disp(['   [PROC] Apply filter ' num2str(band(1)) '-' num2str(band(2)) 'hz']);
+%     signal = signal(:,1:nchannels);
+
+    % Apply lap filter
+%     disp('      [PROC] Apply lap filter');
+%     load(lap_path39)
+%     info.lap = lap;
+%     s_lap = signal * lap;
+
+    % Apply filtering in band
+    disp(['      [PROC] Apply filter ' num2str(band(1)) '-' num2str(band(2)) 'hz']);
     [b, a] = butter(filterOrder, band*2/sampleRate);
-    signal = filtfilt(b, a, signal);
-    disp('   [PROC] Apply lap filter');
-    
-%     signal = signal(:,1:length(channels_label));
-%     signal = signal * lap;
-    disp('   [PROC] Apply PSD');
-    psd_wlength = 0.5;
-    psd_wshift = 0.0625;
-    psd_pshift = 0.25;
-    psd_mlength =  1;
-    info.psd.wlength = psd_wlength;
-    info.psd.wshift = psd_wshift;
-    info.psd.pshift = psd_pshift;
-    info.psd.mlength = psd_mlength;
-    [features, f] = proc_spectrogram(signal, psd_wlength, psd_wshift, psd_pshift, sampleRate, psd_mlength);
-    disp('   [PROC] Apply log');
-    features = log(features);
-    header.EVENT.POS = proc_pos2win(header.EVENT.POS, psd_wshift*sampleRate, 'backward', psd_mlength*sampleRate);
-    header.EVENT.DUR = floor(header.EVENT.DUR/(psd_wshift*sampleRate)) + 1;
-    header.EVENT.TYP = header.EVENT.TYP;
+    s_band = filtfilt(b, a, signal);
+%     s_band = filtfilt(b, a, s_lap);
+
+    % Rect the signal
+    disp('      [PROC] Rectifing signal');
+    s_power = power(s_band, 2);
+%    s_power = abs(s_band);
+
+    % Apply average windows
+    disp('      [PROC] Apply average windows');
+    avg = 1;
+    windowSize = avg * sampleRate;
+    s_avg = zeros(size(s_power));
+    for ch=1:nchannels
+        s_avg(:,ch) = filter(ones(1, windowSize)/(windowSize), 1, s_power(:,ch));
+    end
+
+    % Apply log
+    disp('      [PROC] Apply log to have log band power');
+    s_log = log(s_avg);
+
 
     %% take only interested values
     idx_interest_ch = zeros(1, numel(selchs));
@@ -104,24 +111,19 @@ for idx_f = 1:length(files)
     % for each trial take only the part of cf we are interest in
     for idx_cf = 1:length(cfStart)
 
-        c_cfStart = cfStart(idx_cf) + floor(start_cf/psd_wshift);
+        c_cfStart = cfStart(idx_cf) + floor(start_cf*sampleRate);
 %         c_cfStart = cueStart(idx_cf);
+%         info.cfStart = cat(1, info.cfStart, size(X,1) + c_cfStart);
 
         if end_cf ~= 0
-            c_cfEnd = cfStart(idx_cf) + floor(end_cf/psd_wshift);
+            c_cfEnd = cfStart(idx_cf) + floor(end_cf*sampleRate);
         else
             c_cfEnd = cfStart(idx_cf) + cfDur(idx_cf);
         end
 
 
         % take only the interested channels and the correspondig frequencies
-        tmp_s = [];
-        for idx_ch=1:length(idx_interest_ch)
-            c_f = selFreqs{idx_ch};
-            idx_selFreqs = find(ismember(f,c_f));
-            t_s = features(c_cfStart:c_cfEnd -1, idx_selFreqs, idx_interest_ch(idx_ch));
-            tmp_s = cat(2, tmp_s, t_s);
-        end
+        tmp_s = s_log(c_cfStart:c_cfEnd-1,idx_interest_ch);
         info.cfStart = cat(1, info.cfStart, size(X,1));
         info.cfDur = cat(1, info.cfDur, size(tmp_s,1));
         X = cat(1, X, tmp_s);

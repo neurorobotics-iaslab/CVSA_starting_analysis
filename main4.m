@@ -1,21 +1,20 @@
 clc; clear all; close all;
-% create the dataset according to freq selected, channels, day
+% create the dataset according to freq selected, channels
 
 %% informations
 % selFreqs = {8:2:14; 8:2:14;8:2:14;8:2:14;8:2:14;8:2:14;8:2:14;8:2:14;8:2:14;8:2:14;8:2:14;8:2:14;8:2:14;8:2:14;8:2:14;8:2:14;8:2:14};
 % selchs = {'P3', 'PZ', 'P4', 'POZ', 'O1', 'O2', 'P5', 'P1', 'P2', 'P6', 'PO5', 'PO3', 'PO4', 'PO6', 'PO7', 'PO8', 'OZ'};
-% selFreqs = {[10 14]; [10]; [10 14]}; % luca
-% selchs = {'OZ', 'PO8', 'O1'}; % luca
-% selFreqs = {[10 12]; [12]; [10]}; % paolo features old
-% selchs = {'PO4', 'O2', 'PO7'}; % paolo features old
-selFreqs = {[10 12 14]; [14]; [10]}; % paolo features new data
-selchs = {'PO5', 'PO8', 'PO4'}; % paolo features new data
-% selFreqs = {[10 12]; [10]; [12]}; % tommaso features 
-% selchs = {'PO3', 'PO7', 'PZ'}; % tommaso features 
-c_day = '20240515';
-c_subject = 'c7';
-start_cf = 1; % from which second you extract data, with 0 take the start of the trial
-end_cf   = 4; % end of the trial extracted, with 0 take all the trial length
+% selFreqs = {[10 14]; [10]; [10 14]}; % d6
+% selchs = {'OZ', 'PO8', 'O1'}; % d6
+% selFreqs = {[10 12 14]; [14]; [10]}; % c7 features 
+% selchs = {'PO5', 'PO8', 'PO4'}; % c7 features 
+selFreqs = {[10 12]; [10]; [12]}; % g2 features 
+selchs = {'PO3', 'PO7', 'PZ'}; % g2 features 
+% selFreqs = {[14]; [8 10]; [10]}; % h7 features 
+% selchs = {'P6', 'OZ', 'PO7'}; % h7 features 
+c_subject = 'g2';
+start_cf = 0; % from which second you extract data, with 0 take the start of the trial
+end_cf   = 0; % end of the trial extracted, with 0 take all the trial length
 train_percentage = 0.75;
 
 classes = [730 731];
@@ -24,10 +23,10 @@ classes = [730 731];
 sampleRate = 512;
 lap_path39 = '/home/paolo/laplacians/lap_39ch_CVSA.mat';
 load(lap_path39)
-sfile = ['/home/paolo/cvsa_ws/record/dataset/' c_subject '_' c_day '_a_cf_14.mat'];
+sfile = ['/home/paolo/cvsa_ws/record/' c_subject '/dataset/psd_a_cf_' num2str(start_cf) '' num2str(end_cf) '.mat'];
 
 path = ['/home/paolo/cvsa_ws/record/' c_subject '/mat_selectedTrials'];
-files = dir(fullfile(path, ['*' c_day '*.mat']));
+files = dir(fullfile(path, '*.mat'));
 
 channels_label = {'FP1', 'FP2', 'F3', 'FZ', 'F4', 'FC1', 'FC2', 'C3', 'CZ', 'C4', 'CP1', 'CP2', 'P3', 'PZ', 'P4', 'POZ', 'O1', 'O2', 'EOG', ...
         'F1', 'F2', 'FC3', 'FCZ', 'FC4', 'C1', 'C2', 'CP3', 'CP4', 'P5', 'P1', 'P2', 'P6', 'PO5', 'PO3', 'PO4', 'PO6', 'PO7', 'PO8', 'OZ'};

@@ -11,8 +11,7 @@ clc; clear all; close all;
 % selchs = {'PO4', 'O2', 'PO7'}; % paolo features
 selFreqs = {[10 12]; [14]; [10]}; % paolo features new data
 selchs = {'PO5', 'PO8', 'PO4'}; % paolo features new data
-c_day = '20240515';
-c_subject = 'c7';
+c_subject = 'h7';
 start_cf = 0; % from which second you extract data, with 0 take the start of the trial
 end_cf = 0; % end of the trial extracted, with 0 take all the trial length
 train_percentage = 0.75;
@@ -22,10 +21,10 @@ train_percentage = 0.75;
 classes = [730 731];
 sampleRate = 512;
 lap_path39 = '/home/paolo/laplacians/lap_39ch_CVSA.mat';
-sfile = ['/home/paolo/cvsa_ws/record/dataset/' c_subject c_day 'c.mat'];
+sfile = ['/home/paolo/cvsa_ws/record/' c_subject '/dataset/psd_c_cf_' num2str(start_cf) '' num2str(end_cf) '_band_' num2str(band(1)) '' num2str(band(2)) '.mat'];
 
 path = ['/home/paolo/cvsa_ws/record/' c_subject '/mat_selectedTrials'];
-files = dir(fullfile(path, ['*' c_day '*.mat']));
+files = dir(fullfile(path,'*.mat'));
 
 channels_label = {'FP1', 'FP2', 'F3', 'FZ', 'F4', 'FC1', 'FC2', 'C3', 'CZ', 'C4', 'CP1', 'CP2', 'P3', 'PZ', 'P4', 'POZ', 'O1', 'O2', 'EOG', ...
         'F1', 'F2', 'FC3', 'FCZ', 'FC4', 'C1', 'C2', 'CP3', 'CP4', 'P5', 'P1', 'P2', 'P6', 'PO5', 'PO3', 'PO4', 'PO6', 'PO7', 'PO8', 'OZ'};
