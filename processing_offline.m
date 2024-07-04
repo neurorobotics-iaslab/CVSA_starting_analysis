@@ -10,11 +10,10 @@ s_lap = signal * lap;
 
 % filter alpha band
 disp('   [proc] applying filtering')
-[b_alpha, a_alpha] = butter(filtOrder, band*2/sampleRate);
-s_filt = zeros(size(signal));
-for idx_ch = 1:nchannels
-    s_filt(:,idx_ch) = filtfilt(b_alpha, a_alpha, signal(:,idx_ch));
-end
+[b, a] = butter(filtOrder, band(2)*(2/sampleRate),'low');
+s_low = filter(b,a,signal);
+[b, a] = butter(filtOrder, band(1)*(2/sampleRate),'high');
+s_filt = filter(b,a,s_low);
 
 % squaring
 disp('   [proc] applying power')

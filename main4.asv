@@ -8,11 +8,11 @@ clc; clear all; close all;
 % selchs = {'OZ', 'PO8', 'O1'}; % d6
 % selFreqs = {[10 12 14]; [14]; [10]}; % c7 features 
 % selchs = {'PO5', 'PO8', 'PO4'}; % c7 features 
-% selFreqs = {[10 12]; [10]; [12]}; % g2 features 
-% selchs = {'PO3', 'PO7', 'PZ'}; % g2 features 
-selFreqs = {[14]; [8 10]; [10]}; % h7 features 
-selchs = {'P6', 'OZ', 'PO4'}; % h7 features 
-c_subject = 'h7';
+selFreqs = {[10 12]; [10]; [12]}; % g2 features 
+selchs = {'PO3', 'PO7', 'PZ'}; % g2 features 
+% selFreqs = {[14]; [8 10]; [10]}; % h7 features 
+% selchs = {'P6', 'OZ', 'PO7'}; % h7 features 
+c_subject = 'g2';
 start_cf = 0; % from which second you extract data, with 0 take the start of the trial
 end_cf   = 0; % end of the trial extracted, with 0 take all the trial length
 train_percentage = 0.75;
@@ -133,6 +133,7 @@ for idx_f = 1:length(files)
 end
 
 info.startTest = info.cfStart(floor(train_percentage * size(info.cfStart,1)));
+info.idx_chans = idx_interest_ch;
 
 %% save the values
 save(sfile, 'X', 'y', 'info');

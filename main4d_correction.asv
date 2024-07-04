@@ -2,16 +2,19 @@ clc; clear all; close all;
 % create the dataset log band power, all channels and freq 8-14
 
 %% informations
-c_subject = 'c7';   %%%%%%%%%%%%% subject -------------
+selchs = {'P3', 'PZ', 'P4', 'POZ', 'O1', 'O2', 'P5', 'P1', 'P2', 'P6', 'PO5', 'PO3', 'PO4', 'PO6', 'PO7', 'PO8', 'OZ'};
+c_subject = 'c7';
+start_cf = 0; % from which second you extract data, with 0 take the start of the trial
+end_cf   = 0; % end of the trial extracted, with 0 take all the trial length
 train_percentage = 0.75;
+
 classes = [730 731];
 band = [8 14];
 filterOrder = 4;
-selchs = {'P3', 'PZ', 'P4', 'POZ', 'O1', 'O2', 'P5', 'P1', 'P2', 'P6', 'PO5', 'PO3', 'PO4', 'PO6', 'PO7', 'PO8', 'OZ'};
 
 % not modification needed for these informations
 sampleRate = 512;
-sfile = ['/home/paolo/cvsa_ws/record/' c_subject '/dataset/logband_d_cf_band_' num2str(band(1)) '' num2str(band(2)) '.mat'];
+sfile = ['/home/paolo/cvsa_ws/record/' c_subject '/dataset/logband_d_cf_' num2str(start_cf) '' num2str(end_cf) '_band_' num2str(band(1)) '' num2str(band(2)) '.mat'];
 
 path = ['/home/paolo/cvsa_ws/record/' c_subject '/mat_selectedTrials'];
 files = dir(fullfile(path, '*.mat'));
@@ -19,6 +22,7 @@ files = dir(fullfile(path, '*.mat'));
 channels_label = {'FP1', 'FP2', 'F3', 'FZ', 'F4', 'FC1', 'FC2', 'C3', 'CZ', 'C4', 'CP1', 'CP2', 'P3', 'PZ', 'P4', 'POZ', 'O1', 'O2', 'EOG', ...
         'F1', 'F2', 'FC3', 'FCZ', 'FC4', 'C1', 'C2', 'CP3', 'CP4', 'P5', 'P1', 'P2', 'P6', 'PO5', 'PO3', 'PO4', 'PO6', 'PO7', 'PO8', 'OZ'};
 
+% selchs = channels_label;
 
 %% initialization variable to save
 X = [];
@@ -27,12 +31,26 @@ y = [];
 info.classes = classes;
 info.sampleRate = sampleRate;
 info.selchs = selchs;
+info.startTimeCfExtracted = start_cf;
 info.files = {};
 info.band = band;
-info.trialStart = [];
-info.cfDUR = [];
+info.cfStart = [];
+info.cfDur = [];
 info.filterOrder = 4;
 info.startNewFile = [0];
+info.startcf = [];
+
+%% check the end and start of extraction
+if end_cf < start_cf && end_cf ~= 0
+    disp('Errore nella selezione di inizio e fine dei trials')
+elseif end_cf == 0 && start_cf == 0
+    disp('take all the trial')
+elseif end_cf == 0
+    disp(['the end is the duration of the trial but start at ' num2str(start_cf)])
+elseif start_cf == 0
+    disp(['the start is at ' num2str(start_cf) ' end at the duration of the trial'])
+end
+
 
 %% take only interested data
 for idx_f = 1:length(files)
@@ -80,7 +98,6 @@ for idx_f = 1:length(files)
         data = signal(start_trial:end_trial,:);
 
         % application of the buffer
-        info.trialStart = cat(1, info.cfStart, size(X,1));
         nchunks = (end_trial-start_trial) / 32;
         for j = 1:nchunks
             frame = data((j-1)*frameSize+1:j*frameSize,:);
@@ -112,23 +129,21 @@ for idx_f = 1:length(files)
             % save in the dataset
             X = cat(1, X, tmp_data);
             y = cat(1, y, repmat(cueTYP(i), size(tmp_data,1), 1));
-            
+            info.cfStart = cat(1, info.cfStart, size(X,1));
+            info.startNewFile = cat(1, info.startNewFile, length(X));
         end
-        info.cfDUR = cat(1, info.cfDUR, size(data, 1));
     end
 
     %% take only interested values
-    disp('   Take only interested channels')
+    disp('   Take only interested channels and save in dataset variables')
     idx_interest_ch = zeros(1, numel(selchs));
     for k=1:numel(selchs)
         idx_interest_ch(k) = find(strcmp(channels_label, selchs{k}));
     end
-    info.startNewFile = cat(1, info.startNewFile, size(X,1)-info.cfStart(end));
 end
 
-info.startTest = info.cfStart(floor(train_percentage * size(info.cfStart,1)));
+info.startTest = info.cfStart(floor(train_percentage * size(X,1)));
 info.idx_selchs = idx_interest_ch;
 
 %% save the values
-X = X(:, idx_interest_ch);
 save(sfile, 'X', 'y', 'info');

@@ -1,17 +1,34 @@
 clc; clear all; close all;
-% create the dataset log band power, all channels and freq 8-14
+% create the dataset log band power, selected channels and selected freq
 
 %% informations
-c_subject = 'c7';   %%%%%%%%%%%%% subject -------------
+c_subject = 'g2';   %%%%%%%%%%%%% subject -------------
 train_percentage = 0.75;
 classes = [730 731];
-band = [8 14];
+
 filterOrder = 4;
-selchs = {'P3', 'PZ', 'P4', 'POZ', 'O1', 'O2', 'P5', 'P1', 'P2', 'P6', 'PO5', 'PO3', 'PO4', 'PO6', 'PO7', 'PO8', 'OZ'};
+% select the channels and bands according to the name of the subject
+if c_subject == 'c7'
+    selchs = {{'PO7', 'PO5', 'PO4', 'PO6', 'PO8'}};
+    bands = {[8 14]};
+elseif c_subject == 'g2'
+    selchs = {{'P6', 'PO7', 'POZ', 'OZ'}};
+    bands = {[8 14]};
+elseif c_subject == 'h7'
+    selchs = {{'P4', 'PO4', 'O2', 'PO6', 'PO8'}}; 
+    bands = {[8 14]};
+elseif c_subject == 'd6'
+    selchs = {{'P3', 'P1', 'P5'}};
+    bands = {[8 14]};
+else
+    disp('No such subject')
+end
+
+bands = {[15 18]};
 
 % not modification needed for these informations
 sampleRate = 512;
-sfile = ['/home/paolo/cvsa_ws/record/' c_subject '/dataset/logband_d_cf_band_' num2str(band(1)) '' num2str(band(2)) '.mat'];
+sfile = ['/home/paolo/cvsa_ws/record/' c_subject '/dataset/logband_f_cf_selectedband.mat'];
 
 path = ['/home/paolo/cvsa_ws/record/' c_subject '/mat_selectedTrials'];
 files = dir(fullfile(path, '*.mat'));
@@ -28,9 +45,9 @@ info.classes = classes;
 info.sampleRate = sampleRate;
 info.selchs = selchs;
 info.files = {};
-info.band = band;
+info.band = bands;
 info.trialStart = [];
-info.cfDUR = [];
+info.trialDUR = [];
 info.filterOrder = 4;
 info.startNewFile = [0];
 
@@ -58,6 +75,10 @@ for idx_f = 1:length(files)
     disp('   Initialization variables')
     frameSize = 32;
     bufferSize = 512;
+    % for each band define the filter
+    for k=1:length(bands)
+        
+    end
     [b_low, a_low] = butter(filterOrder, band(2)*(2/sampleRate),'low');
     [b_high, a_high] = butter(filterOrder, band(1)*(2/sampleRate),'high');
 
@@ -80,7 +101,7 @@ for idx_f = 1:length(files)
         data = signal(start_trial:end_trial,:);
 
         % application of the buffer
-        info.trialStart = cat(1, info.cfStart, size(X,1));
+        info.trialStart = cat(1, info.trialStart, size(X,1));
         nchunks = (end_trial-start_trial) / 32;
         for j = 1:nchunks
             frame = data((j-1)*frameSize+1:j*frameSize,:);
@@ -114,7 +135,7 @@ for idx_f = 1:length(files)
             y = cat(1, y, repmat(cueTYP(i), size(tmp_data,1), 1));
             
         end
-        info.cfDUR = cat(1, info.cfDUR, size(data, 1));
+        info.trialDUR = cat(1, info.trialDUR, size(X,1)-info.trialStart(end));
     end
 
     %% take only interested values
@@ -123,10 +144,10 @@ for idx_f = 1:length(files)
     for k=1:numel(selchs)
         idx_interest_ch(k) = find(strcmp(channels_label, selchs{k}));
     end
-    info.startNewFile = cat(1, info.startNewFile, size(X,1)-info.cfStart(end));
+    info.startNewFile = cat(1, info.startNewFile, size(X,1));
 end
 
-info.startTest = info.cfStart(floor(train_percentage * size(info.cfStart,1)));
+info.startTest = info.trialStart(floor(train_percentage * size(info.trialStart,1)));
 info.idx_selchs = idx_interest_ch;
 
 %% save the values

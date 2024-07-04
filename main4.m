@@ -1,5 +1,5 @@
 clc; clear all; close all;
-% create the dataset according to freq selected, channels
+% create the dataset according to freq selected, channels only psd
 
 %% informations
 % selFreqs = {8:2:14; 8:2:14;8:2:14;8:2:14;8:2:14;8:2:14;8:2:14;8:2:14;8:2:14;8:2:14;8:2:14;8:2:14;8:2:14;8:2:14;8:2:14;8:2:14;8:2:14};
@@ -133,6 +133,7 @@ for idx_f = 1:length(files)
 end
 
 info.startTest = info.cfStart(floor(train_percentage * size(info.cfStart,1)));
+info.idx_selchs = idx_interest_ch;
 
 %% save the values
 save(sfile, 'X', 'y', 'info');
